@@ -56,20 +56,19 @@ export default function Navbar() {
               type="button"
               className="user-profile-badge user-profile-clickable"
               onClick={() => setShowProfileModal(true)}
-              title="Click to view account and change profile display name"
-              aria-label="Open profile settings"
+              title="Click to edit profile display name"
+              aria-label="Edit profile display name"
             >
-              <UserCircle size={20} className="user-icon text-blue" />
+              <UserCircle size={22} className="user-avatar-icon" />
               <div className="user-details text-left">
-                <span className="user-name flex items-center gap-1 font-bold">
+                <span className="user-name">
                   {displayName}
-                  <span className="edit-pill-hint">Edit Profile</span>
                 </span>
-                <span className="user-role-dept text-xs text-muted">
+                <span className="user-role-dept">
                   {accountDisplayName}
                 </span>
               </div>
-              <ChevronDown size={14} className="text-muted ml-1" />
+              <ChevronDown size={14} className="user-menu-chevron" />
             </button>
 
             <button

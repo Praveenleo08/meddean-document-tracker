@@ -144,23 +144,58 @@ body {
 .user-profile-badge {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: 10px;
+  padding: 5px 12px;
   background-color: rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  text-align: left;
+}
+
+.user-profile-badge:hover,
+.user-profile-clickable:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.user-avatar-icon {
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.25;
 }
 
 .user-name {
-  font-size: 0.85rem;
+  font-size: 0.86rem;
   font-weight: 600;
+  color: #ffffff !important;
   display: block;
+  letter-spacing: -0.01em;
 }
 
 .user-role-dept {
   font-size: 0.72rem;
-  color: #38bdf8;
+  color: #94a3b8 !important;
   display: block;
+}
+
+.user-menu-chevron {
+  color: #94a3b8;
+  margin-left: 2px;
+  transition: transform 0.2s ease;
+}
+
+.user-profile-badge:hover .user-menu-chevron {
+  color: #ffffff;
 }
 
 /* Main Layout Viewport */
@@ -2565,42 +2600,16 @@ optgroup option {
 
 /* Navbar Clickable Profile Badge */
 .user-profile-clickable {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  padding: 4px 8px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.15s ease;
-  font-family: inherit;
-}
-
-.user-profile-clickable:hover {
-  background-color: rgba(239, 246, 255, 0.85);
-  border-color: #bfdbfe;
-}
-
-.edit-pill-hint {
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  background-color: #dbeafe;
-  color: #1e40af;
-  padding: 1px 5px;
-  border-radius: 4px;
-  letter-spacing: 0.03em;
-  margin-left: 4px;
+  color: #ffffff;
 }
 
 /* Profile Settings Modal */
 .profile-settings-modal {
-  max-width: 540px;
+  max-width: 440px;
   width: 92%;
   background: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .account-details-box {
