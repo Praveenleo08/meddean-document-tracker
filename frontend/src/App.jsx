@@ -12,6 +12,7 @@ import AllCommunicationsPage from "./pages/AllCommunicationsPage";
 import PendingWorksPage from "./pages/PendingWorksPage";
 import DepartmentsPage from "./pages/DepartmentsPage";
 import DepartmentDashboardPage from "./pages/DepartmentDashboardPage";
+import UserProfilesPage from "./pages/UserProfilesPage";
 
 // Protected Layout Route wrapper
 function ProtectedLayout({ children, requiredRole }) {
@@ -105,6 +106,18 @@ export default function App() {
                 <DepartmentsPage />
               </ProtectedLayout>
             }
+          />
+          <Route
+            path="/admin/user-profiles"
+            element={
+              <ProtectedLayout requiredRole="admin">
+                <UserProfilesPage />
+              </ProtectedLayout>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={<Navigate to="/admin/user-profiles" replace />}
           />
 
           {/* Department Routes */}

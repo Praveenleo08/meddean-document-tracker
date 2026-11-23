@@ -11,7 +11,8 @@ import {
   Layers,
   FileCheck2,
   LogOut,
-  FolderOpen
+  FolderOpen,
+  Users
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -66,6 +67,14 @@ export default function Sidebar() {
             >
               <Layers size={18} />
               <span>Departments</span>
+            </NavLink>
+
+            <NavLink
+              to="/admin/user-profiles"
+              className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+            >
+              <Users size={18} />
+              <span>User Profiles</span>
             </NavLink>
           </>
         ) : (

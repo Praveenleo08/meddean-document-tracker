@@ -1,5 +1,5 @@
 /**
- * Authentication Controller for MedDean Document Tracker.
+ * Authentication & User Management Controller for MedDean Document Tracker.
  */
 
 const authService = require("../services/authService");
@@ -34,6 +34,82 @@ class AuthController {
       success: true,
       user: req.user
     });
+  }
+
+  /**
+   * Update Profile Name (Authenticated User)
+   * Only alters display profile name, keeping account name and credentials untouched.
+   */
+  async updateProfile(req, res) {
+    try {
+      const { profileName } = req.body;
+      if (!profileName || !profileName.trim()) {
+        return res.status(400).json({
+          success: false,
+          error: "Profile name is required."
+        });
+      }
+
+      const result = await authService.updateProfile(req.user.id, { profileName });
+      return res.status(200).json({
+        success: true,
+        message: "Profile name updated successfully.",
+        ...result
+      });
+    } catch (err) {
+      return res.status(err.statusCode || 500).json({
+        success: false,
+        error: err.message || "Failed to update profile name."
+      });
+    }
+  }
+
+  /**
+   * Get all user accounts (Exclusive to Dean Admin)
+   */
+  async getAllUsers(req, res) {
+    try {
+      const users = authService.getAllUsers();
+      return res.status(200).json({
+        success: true,
+        users
+      });
+    } catch (err) {
+      return res.status(500).json({
+        success: false,
+        error: err.message || "Failed to retrieve user accounts."
+      });
+    }
+  }
+
+  /**
+   * Update User Account (Exclusive to Dean Admin)
+   * Dean can alter Account Name, Username, Password, Profile Name, and Description.
+   */
+  async updateUserByAdmin(req, res) {
+    try {
+      const { id } = req.params;
+      const { accountName, username, profileName, password, title } = req.body;
+
+      const updatedUser = await authService.updateUserByAdmin(id, {
+        accountName,
+        username,
+        profileName,
+        password,
+        title
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "User account updated successfully by Dean Admin.",
+        user: updatedUser
+      });
+    } catch (err) {
+      return res.status(err.statusCode || 500).json({
+        success: false,
+        error: err.message || "Failed to update user account."
+      });
+    }
   }
 
   async getDemoUsers(req, res) {

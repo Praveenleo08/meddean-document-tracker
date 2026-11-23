@@ -51,6 +51,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUserProfile = (newProfileData) => {
+    setUser((prev) => {
+      const updated = { ...prev, ...newProfileData };
+      try {
+        localStorage.setItem("meddean_user", JSON.stringify(updated));
+      } catch (e) {
+        console.warn("Could not save user to localStorage:", e);
+      }
+      return updated;
+    });
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -64,6 +76,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     logout,
+    updateUserProfile,
     isAdmin: user?.role === "admin",
     isDepartment: user?.role === "department",
     department: user?.department || null
