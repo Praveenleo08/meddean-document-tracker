@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+*/node_modules/
+dist/
+*/dist/
+
+# Python Cache & Virtual Environments
+__pycache__/
+*/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+venv/
+env/
+
+# Environment variables & secrets
+.env
+.env.*
+*.env
+!.env.example
+!**/.env.example
+*.pem
+*.key
+google-service-account*.json
+*/google-service-account*.json
+*/**/google-service-account*.json
+
+# Storage and temporary uploads
+uploads/
+*/uploads/
+meddean-drive-storage/
+*/meddean-drive-storage/
+*.log
+
+# OS and Editor generated
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
