@@ -75,9 +75,10 @@ export default function Navbar() {
               onClick={logout}
               className="btn btn-secondary btn-sm logout-btn"
               title="Sign Out"
+              aria-label="Sign Out"
             >
               <LogOut size={16} />
-              <span>Logout</span>
+              <span className="logout-btn-text">Logout</span>
             </button>
 
             {/* Profile Settings Modal */}

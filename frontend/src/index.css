@@ -45,6 +45,12 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -53,6 +59,11 @@ body {
   color: var(--text-main);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, a, input, select, textarea {
+  touch-action: manipulation;
 }
 
 /* App Layout */
@@ -2737,6 +2748,369 @@ optgroup option {
 .data-table td {
   vertical-align: middle;
 }
+
+/* ==========================================================================
+   Password Input Wrapper & Visibility Eye Toggle
+   ========================================================================== */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-input-field {
+  padding-right: 44px !important;
+  width: 100%;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  min-width: 38px;
+  min-height: 38px;
+  touch-action: manipulation;
+  z-index: 2;
+}
+
+.password-toggle-btn:hover,
+.password-toggle-btn:active {
+  color: #0f172a;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* ==========================================================================
+   Mobile Responsive System & Lag-Free Touch Navigation
+   ========================================================================== */
+
+/* Mobile Drawer Backdrop */
+.sidebar-mobile-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Overlay Drawer Navigation */
+  .sidebar-mobile-backdrop {
+    display: block;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: 85;
+    animation: fadeIn 0.18s ease-out;
+    touch-action: manipulation;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    bottom: 0;
+    width: 270px;
+    z-index: 90;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.22);
+    transform: translate3d(0, 0, 0);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+    will-change: transform;
+    background-color: #ffffff;
+    border-right: 1px solid var(--border-color);
+  }
+
+  .sidebar.collapsed {
+    transform: translate3d(-100%, 0, 0);
+    width: 270px !important;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Compact Navbar */
+  .navbar {
+    padding: 0 12px;
+    height: 60px;
+  }
+
+  .navbar-left {
+    gap: 8px;
+  }
+
+  .brand-logo-container {
+    width: 34px;
+    height: 34px;
+  }
+
+  .brand-title {
+    font-size: 1.05rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 170px;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .navbar-actions {
+    gap: 6px;
+  }
+
+  .user-profile-badge {
+    padding: 4px 8px;
+    gap: 6px;
+    max-width: 160px;
+  }
+
+  .user-role-dept {
+    display: none;
+  }
+
+  .user-name {
+    font-size: 0.78rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+  }
+
+  .logout-btn {
+    padding: 6px 10px;
+  }
+
+  .logout-btn-text {
+    display: none;
+  }
+
+  /* Page Viewport & Spacing */
+  .main-viewport {
+    padding: 16px 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+  }
+
+  .page-actions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .page-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .content-card {
+    padding: 14px 12px;
+    border-radius: 8px;
+  }
+
+  /* Filters & Tabs */
+  .filters-grid-compact {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .filter-item {
+    width: 100%;
+  }
+
+  .filter-item .form-select,
+  .filter-item .form-input,
+  .filter-item .search-input-wrap {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .filter-actions-item {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .dept-filter-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .category-tabs-wrap {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    scrollbar-width: thin;
+  }
+
+  .tab-pill {
+    flex-shrink: 0;
+  }
+
+  .search-input-wrap.max-w-md {
+    max-width: 100%;
+  }
+
+  /* Tables */
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 10px 8px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  /* Modals */
+  .modal-overlay,
+  .modal-backdrop {
+    padding: 10px;
+  }
+
+  .modal-container {
+    width: 100%;
+    max-height: 94vh;
+    border-radius: 12px;
+  }
+
+  .modal-header {
+    padding: 12px 14px;
+  }
+
+  .modal-body {
+    padding: 14px;
+    max-height: calc(94vh - 115px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-footer {
+    padding: 12px 14px;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .dean-control-modal,
+  .profile-settings-modal {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}
+
+/* Extra Compact Phones (< 480px and < 400px) */
+@media (max-width: 480px) {
+  .login-wrapper {
+    padding: 16px 12px;
+  }
+
+  .login-card {
+    padding: 24px 18px;
+    border-radius: 10px;
+  }
+
+  .login-title {
+    font-size: 1.25rem;
+  }
+
+  .institution-seal {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 10px;
+  }
+
+  .demo-chips-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .demo-chip {
+    padding: 8px 12px;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .kpi-card {
+    padding: 10px 8px;
+  }
+
+  .kpi-title {
+    font-size: 0.7rem;
+  }
+
+  .kpi-value {
+    font-size: 1.3rem;
+  }
+
+  .kpi-footer {
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .brand-title {
+    max-width: 120px;
+    font-size: 0.92rem;
+  }
+
+  .user-profile-badge {
+    max-width: 110px;
+  }
+
+  .user-name {
+    max-width: 65px;
+    font-size: 0.75rem;
+  }
+
+  .user-menu-chevron {
+    display: none;
+  }
+}
+
+@media (max-width: 340px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 
 
