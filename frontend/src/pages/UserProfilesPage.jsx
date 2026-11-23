@@ -12,11 +12,9 @@ import {
   AlertCircle,
   X,
   Save,
-  Tag,
   ShieldAlert,
   Eye,
-  EyeOff,
-  UserCheck
+  EyeOff
 } from "lucide-react";
 
 export default function UserProfilesPage() {
@@ -29,7 +27,6 @@ export default function UserProfilesPage() {
   // Form states for Dean edit modal
   const [editAccountName, setEditAccountName] = useState("");
   const [editUsername, setEditUsername] = useState("");
-  const [editProfileName, setEditProfileName] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -59,7 +56,6 @@ export default function UserProfilesPage() {
     setEditingUser(u);
     setEditAccountName(u.accountName || `${u.department} Dept`);
     setEditUsername(u.username);
-    setEditProfileName(u.profileName || u.name || "");
     setEditPassword("");
     setEditTitle(u.title || "");
     setShowPassword(false);
@@ -94,7 +90,6 @@ export default function UserProfilesPage() {
       const payload = {
         accountName: editAccountName.trim(),
         username: editUsername.trim().toLowerCase(),
-        profileName: editProfileName.trim(),
         title: editTitle.trim()
       };
 
@@ -104,11 +99,11 @@ export default function UserProfilesPage() {
 
       const res = await api.put(`/auth/users/${editingUser.id}`, payload);
       if (res.data?.success) {
-        setSaveSuccess("Account credentials and profile updated successfully!");
+        setSaveSuccess("Account credentials updated successfully!");
         fetchUsers();
         setTimeout(() => {
           closeEditModal();
-        }, 1200);
+        }, 1000);
       } else {
         setSaveError(res.data?.error || "Failed to update account.");
       }
@@ -128,7 +123,6 @@ export default function UserProfilesPage() {
       (u.username && u.username.toLowerCase().includes(q)) ||
       (u.accountName && u.accountName.toLowerCase().includes(q)) ||
       (u.department && u.department.toLowerCase().includes(q)) ||
-      (u.profileName && u.profileName.toLowerCase().includes(q)) ||
       (u.title && u.title.toLowerCase().includes(q))
     );
   });
@@ -146,7 +140,7 @@ export default function UserProfilesPage() {
             Institutional User Profiles & Account Control
           </h1>
           <p className="page-subtitle">
-            Dean Administrative Panel: Control account names, login usernames, passwords, and display profile names across all sections.
+            Dean Administrative Panel: Manage official account names, login credentials, and passwords across all college and hospital sections.
           </p>
         </div>
 
@@ -241,7 +235,7 @@ export default function UserProfilesPage() {
           <input
             type="text"
             className="form-input form-input-search"
-            placeholder="Search account name, username, or profile..."
+            placeholder="Search account name or username..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -263,27 +257,26 @@ export default function UserProfilesPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th style={{ width: "90px" }}>Code</th>
-                <th style={{ width: "230px" }}>Account Name (Main)</th>
-                <th style={{ width: "190px" }}>Profile Name (Display)</th>
+                <th style={{ width: "80px", textAlign: "center" }}>Code</th>
+                <th style={{ minWidth: "250px" }}>Account Name (Main)</th>
                 <th style={{ width: "160px" }}>Login Username</th>
-                <th style={{ width: "130px" }}>Category</th>
+                <th style={{ width: "140px", textAlign: "center" }}>Category</th>
                 <th style={{ minWidth: "220px" }}>Work Portfolio</th>
-                <th style={{ width: "140px" }}>Password Status</th>
-                <th style={{ width: "110px", textAlign: "center" }}>Dean Action</th>
+                <th style={{ width: "140px", textAlign: "center" }}>Password Status</th>
+                <th style={{ width: "100px", textAlign: "center" }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="empty-table-cell">
+                  <td colSpan={7} className="empty-table-cell">
                     <RefreshCw size={24} className="animate-spin text-blue mb-2" />
                     <div>Loading institutional accounts database...</div>
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="empty-table-cell">
+                  <td colSpan={7} className="empty-table-cell">
                     <div>No accounts match "{searchQuery}".</div>
                   </td>
                 </tr>
@@ -293,28 +286,23 @@ export default function UserProfilesPage() {
                   const isAdmin = u.role === "admin";
                   return (
                     <tr key={u.id} className={isAdmin ? "bg-amber-subtle" : ""}>
-                      <td className="font-mono text-xs font-bold text-muted">
+                      <td className="font-mono text-xs font-bold text-muted text-center">
                         {u.code || u.id}
                       </td>
                       <td>
-                        <span className="font-bold text-navy flex items-center gap-1.5">
-                          <Building2 size={14} className={isCollege ? "text-blue" : "text-emerald"} />
-                          {u.accountName || `${u.department} Dept`}
+                        <span className="font-bold text-navy flex items-center gap-2">
+                          <Building2 size={15} className={isCollege ? "text-blue flex-shrink-0" : "text-emerald flex-shrink-0"} />
+                          <span>{u.accountName || `${u.department} Dept`}</span>
                         </span>
                       </td>
                       <td>
-                        <span className="profile-name-tag font-semibold text-slate-700">
-                          {u.profileName || u.name}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded border font-semibold text-blue-700">
+                        <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded border font-semibold text-blue-700 inline-block">
                           {u.username}
                         </span>
                       </td>
-                      <td>
+                      <td style={{ textAlign: "center" }}>
                         <span
-                          className={`badge-pill text-xs ${
+                          className={`badge-pill text-xs inline-block ${
                             isAdmin
                               ? "bg-amber-100 text-amber-800 border-amber-300"
                               : isCollege
@@ -328,13 +316,13 @@ export default function UserProfilesPage() {
                       <td className="text-xs text-muted leading-snug">
                         {u.title || "Institutional Duties"}
                       </td>
-                      <td>
+                      <td style={{ textAlign: "center" }}>
                         {u.customPasswordSet ? (
-                          <span className="text-xs font-semibold text-emerald flex items-center gap-1">
+                          <span className="text-xs font-semibold text-emerald inline-flex items-center gap-1 justify-center">
                             <Key size={12} /> Custom Set
                           </span>
                         ) : (
-                          <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                          <span className="text-xs font-semibold text-slate-500 inline-flex items-center gap-1 justify-center">
                             <Key size={12} /> {isAdmin ? "Admin@123" : "Dean@123"}
                           </span>
                         )}
@@ -347,7 +335,7 @@ export default function UserProfilesPage() {
                           title="Dean: Control Account Name, Username & Password"
                         >
                           <Edit size={13} />
-                          <span>Control</span>
+                          <span>Edit</span>
                         </button>
                       </td>
                     </tr>
@@ -359,19 +347,18 @@ export default function UserProfilesPage() {
         </div>
       </div>
 
-      {/* Dean Edit Account Modal */}
+      {/* Dean Edit Account Modal (Fixed Popup) */}
       {editingUser && (
-        <div className="modal-backdrop" onClick={closeEditModal}>
+        <div className="modal-overlay" onClick={closeEditModal}>
           <div
             className="modal-container dean-control-modal"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: "620px" }}
           >
             {/* Header */}
             <div className="modal-header">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-full bg-amber-subtle text-amber">
-                  <ShieldAlert size={24} />
+                  <ShieldAlert size={22} />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -381,7 +368,7 @@ export default function UserProfilesPage() {
                     </span>
                   </div>
                   <p className="modal-subtitle">
-                    Modify the primary Account Name, Username, Password, or Display Profile for{" "}
+                    Modify official Account Name, Login Username, and Password for{" "}
                     <strong>{editingUser.accountName || editingUser.department}</strong>.
                   </p>
                 </div>
@@ -390,6 +377,7 @@ export default function UserProfilesPage() {
                 type="button"
                 className="modal-close-btn"
                 onClick={closeEditModal}
+                aria-label="Close modal"
               >
                 <X size={20} />
               </button>
@@ -430,7 +418,7 @@ export default function UserProfilesPage() {
                     required
                   />
                   <p className="text-xs text-muted mt-1">
-                    This is the central department name that displays on official documents and registers.
+                    Primary department name displayed on official registers and document workflows.
                   </p>
                 </div>
 
@@ -449,29 +437,11 @@ export default function UserProfilesPage() {
                     required
                   />
                   <p className="text-xs text-muted mt-1">
-                    Unique credential used by the officer to sign into this section portal.
+                    Unique credential used by the department/section to sign in.
                   </p>
                 </div>
 
-                {/* 3. Display Profile Name */}
-                <div className="form-group mb-3">
-                  <label className="form-label font-bold" htmlFor="dean-profile-name">
-                    Display Profile Name
-                  </label>
-                  <input
-                    id="dean-profile-name"
-                    type="text"
-                    className="form-input"
-                    value={editProfileName}
-                    onChange={(e) => setEditProfileName(e.target.value)}
-                    placeholder="e.g. hospital - s5 or Officer Name"
-                  />
-                  <p className="text-xs text-muted mt-1">
-                    Display name shown in top navigation bar and user greetings.
-                  </p>
-                </div>
-
-                {/* 4. Password Control (Dean Only) */}
+                {/* 3. Password Control (Dean Only) */}
                 <div className="form-group mb-3 p-3 bg-slate-50 border rounded-lg">
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="form-label font-bold mb-0 flex items-center gap-1.5" htmlFor="dean-password">
@@ -510,7 +480,7 @@ export default function UserProfilesPage() {
                   </p>
                 </div>
 
-                {/* 5. Work Portfolio Description */}
+                {/* 4. Work Portfolio Description */}
                 <div className="form-group mb-4">
                   <label className="form-label font-bold" htmlFor="dean-title">
                     Portfolio / Section Description
