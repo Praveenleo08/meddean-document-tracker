@@ -135,6 +135,10 @@ export default function AllCommunicationsPage() {
     return "";
   };
 
+  const collegeDepts = departments.filter((d) => d.toLowerCase().startsWith("college"));
+  const hospitalDepts = departments.filter((d) => d.toLowerCase().startsWith("hospital"));
+  const otherDepts = departments.filter((d) => !d.toLowerCase().startsWith("college") && !d.toLowerCase().startsWith("hospital"));
+
   const hasActiveFilters =
     deptFilter !== "all" ||
     statusFilter !== "all" ||
@@ -259,12 +263,34 @@ export default function AllCommunicationsPage() {
                 );
               }}
             >
-              <option value="all">All Departments ({departments.length})</option>
-              {departments.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
+              <option value="all">All Sections ({departments.length})</option>
+              {collegeDepts.length > 0 && (
+                <optgroup label="COLLEGE" className="optgroup-header optgroup-college">
+                  {collegeDepts.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {hospitalDepts.length > 0 && (
+                <optgroup label="HOSPITAL" className="optgroup-header optgroup-hospital">
+                  {hospitalDepts.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {otherDepts.length > 0 && (
+                <optgroup label="OTHER SECTIONS">
+                  {otherDepts.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </div>
 

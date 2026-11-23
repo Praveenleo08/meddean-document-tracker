@@ -14,7 +14,7 @@ const googleSheetsService = require("../services/googleSheetsService");
 const { generateDocumentId, generateSafeFilename } = require("../utils/documentIdGenerator");
 const { refineFields } = require("../utils/nodeOcrParser");
 const { formatDateReadable, formatDateTimeReadable } = require("../utils/dateUtils");
-const { DEPARTMENTS } = require("../config/departments");
+const { DEPARTMENTS, INCOMING_SENDERS } = require("../config/departments");
 
 const OCR_SERVICE_URL = process.env.OCR_SERVICE_URL || "http://127.0.0.1:8001";
 
@@ -502,59 +502,9 @@ class DocumentController {
    */
   async getKnownSenders(req, res) {
     try {
-      const defaultSenders = [
-        "Anatomy",
-        "Biochemistry",
-        "Pharmacology",
-        "Pathology",
-        "Microbiology",
-        "Forensic Medicine",
-        "Community Medicine",
-        "Physiology",
-        "General Medicine",
-        "General Surgery",
-        "O &G",
-        "Paediatrics",
-        "Orthopaedics",
-        "Opthamology",
-        "ENT",
-        "Hepatalogy",
-        "Emergency Medicine",
-        "Anaesthesiology",
-        "Radiodignosis",
-        "Dermatology",
-        "Psychiatry",
-        "Dentistry",
-        "Neuro surgery",
-        "SGE",
-        "Paediatric Surgery",
-        "Urology",
-        "Medical Oncology",
-        "Surgical Oncology",
-        "Radiation oncology",
-        "Nephrology",
-        "Medical Gastroenterolgy",
-        "Neurology",
-        "Cardio Thorasic Surgeon",
-        "Cardiology",
-        "Plastic Surgery",
-        "Vascular Surgery",
-        "TB & Respiratory Dept",
-        "Blood bank",
-        "Physical Medicine",
-        "Geriatrics",
-        "DEIC",
-        "Radiology Physicist",
-        "ART",
-        "CSSD",
-        "Medical Strore",
-        "Surgical Store",
-        "MRD"
-      ];
-
       return res.status(200).json({
         success: true,
-        senders: defaultSenders
+        senders: INCOMING_SENDERS
       });
     } catch (err) {
       return res.status(500).json({

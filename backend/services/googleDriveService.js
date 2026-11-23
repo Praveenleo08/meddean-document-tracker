@@ -179,7 +179,7 @@ class GoogleDriveService {
    * Uploads document file to department folder
    */
   async uploadDocument({ buffer, mimeType, filename, department, documentId }) {
-    const targetDept = DEPARTMENTS.includes(department) ? department : "Administration";
+    const targetDept = DEPARTMENTS.includes(department) ? department : (DEPARTMENTS[0] || "College - E1 section");
 
     if (this.isConfigured && this.driveClient) {
       try {

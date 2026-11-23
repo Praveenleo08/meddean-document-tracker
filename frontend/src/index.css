@@ -2440,5 +2440,125 @@ body {
   background-color: #fecdd3;
 }
 
+/* ==========================================================================
+   Section & Department Groupings (College & Hospital)
+   ========================================================================== */
+
+/* Optgroup Styling for Target Department Dropdowns */
+optgroup.optgroup-header {
+  font-weight: 800 !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 0.06em;
+  padding: 8px 4px 4px 4px;
+}
+
+optgroup.optgroup-college {
+  color: #1d4ed8 !important;
+  background-color: #f8faff;
+}
+
+optgroup.optgroup-hospital {
+  color: #047857 !important;
+  background-color: #f0fdf4;
+}
+
+optgroup option {
+  font-weight: 400 !important;
+  color: #1e293b !important;
+  padding: 4px 10px !important;
+  background-color: #ffffff;
+}
+
+/* Department Registry Category Tabs */
+.dept-filter-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 768px) {
+  .dept-filter-controls {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.category-tabs-wrap {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tab-pill {
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  background-color: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab-pill:hover {
+  background-color: #f1f5f9;
+  color: #334155;
+  border-color: #94a3b8;
+}
+
+.tab-pill.active {
+  background-color: #1e293b;
+  color: #ffffff;
+  border-color: #1e293b;
+}
+
+.tab-pill.tab-college.active {
+  background-color: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.tab-pill.tab-hospital.active {
+  background-color: #059669;
+  border-color: #059669;
+  color: #ffffff;
+}
+
+/* Section Card Category Badges & Accents */
+.badge-college {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.badge-hospital {
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.card-college-border {
+  border-left: 4px solid #3b82f6 !important;
+}
+
+.card-hospital-border {
+  border-left: 4px solid #10b981 !important;
+}
+
+.bg-emerald-subtle {
+  background-color: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+}
+
+
 
 

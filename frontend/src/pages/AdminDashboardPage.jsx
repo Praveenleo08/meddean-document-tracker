@@ -64,6 +64,11 @@ export default function AdminDashboardPage() {
     fetchDashboardData();
   }, []);
 
+  // Categorized department summary groups
+  const collegeDepts = departmentSummary.filter((d) => d.department.toLowerCase().startsWith("college"));
+  const hospitalDepts = departmentSummary.filter((d) => d.department.toLowerCase().startsWith("hospital"));
+  const otherDepts = departmentSummary.filter((d) => !d.department.toLowerCase().startsWith("college") && !d.department.toLowerCase().startsWith("hospital"));
+
   // Filter pending documents in Urgent Pending table
   const filteredPendingDocs = pendingDocs.filter((doc) => {
     if (pendingDeptFilter !== "all" && doc.department.toLowerCase() !== pendingDeptFilter.toLowerCase()) {
@@ -237,12 +242,34 @@ export default function AdminDashboardPage() {
               value={pendingDeptFilter}
               onChange={(e) => setPendingDeptFilter(e.target.value)}
             >
-              <option value="all">All Departments ({departmentSummary.length})</option>
-              {departmentSummary.map((d) => (
-                <option key={d.department} value={d.department}>
-                  {d.department} ({d.pending} pending)
-                </option>
-              ))}
+              <option value="all">All Sections ({departmentSummary.length})</option>
+              {collegeDepts.length > 0 && (
+                <optgroup label="COLLEGE" className="optgroup-header optgroup-college">
+                  {collegeDepts.map((d) => (
+                    <option key={d.department} value={d.department}>
+                      {d.department} {d.pending > 0 ? `(${d.pending} pending)` : ""}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {hospitalDepts.length > 0 && (
+                <optgroup label="HOSPITAL" className="optgroup-header optgroup-hospital">
+                  {hospitalDepts.map((d) => (
+                    <option key={d.department} value={d.department}>
+                      {d.department} {d.pending > 0 ? `(${d.pending} pending)` : ""}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {otherDepts.length > 0 && (
+                <optgroup label="OTHER SECTIONS">
+                  {otherDepts.map((d) => (
+                    <option key={d.department} value={d.department}>
+                      {d.department} {d.pending > 0 ? `(${d.pending} pending)` : ""}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </div>
 
@@ -350,12 +377,34 @@ export default function AdminDashboardPage() {
               value={recentDeptFilter}
               onChange={(e) => setRecentDeptFilter(e.target.value)}
             >
-              <option value="all">All Departments ({departmentSummary.length})</option>
-              {departmentSummary.map((d) => (
-                <option key={d.department} value={d.department}>
-                  {d.department}
-                </option>
-              ))}
+              <option value="all">All Sections ({departmentSummary.length})</option>
+              {collegeDepts.length > 0 && (
+                <optgroup label="COLLEGE" className="optgroup-header optgroup-college">
+                  {collegeDepts.map((d) => (
+                    <option key={d.department} value={d.department}>
+                      {d.department}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {hospitalDepts.length > 0 && (
+                <optgroup label="HOSPITAL" className="optgroup-header optgroup-hospital">
+                  {hospitalDepts.map((d) => (
+                    <option key={d.department} value={d.department}>
+                      {d.department}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {otherDepts.length > 0 && (
+                <optgroup label="OTHER SECTIONS">
+                  {otherDepts.map((d) => (
+                    <option key={d.department} value={d.department}>
+                      {d.department}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </div>
 

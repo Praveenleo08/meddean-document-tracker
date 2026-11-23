@@ -47,59 +47,21 @@ function renderHighlightedSender(text, query) {
   );
 }
 
-const DEFAULT_SENDERS = [
-  "Anatomy",
-  "Biochemistry",
-  "Pharmacology",
-  "Pathology",
-  "Microbiology",
-  "Forensic Medicine",
-  "Community Medicine",
-  "Physiology",
-  "General Medicine",
-  "General Surgery",
-  "O &G",
-  "Paediatrics",
-  "Orthopaedics",
-  "Opthamology",
-  "ENT",
-  "Hepatalogy",
-  "Emergency Medicine",
-  "Anaesthesiology",
-  "Radiodignosis",
-  "Dermatology",
-  "Psychiatry",
-  "Dentistry",
-  "Neuro surgery",
-  "SGE",
-  "Paediatric Surgery",
-  "Urology",
-  "Medical Oncology",
-  "Surgical Oncology",
-  "Radiation oncology",
-  "Nephrology",
-  "Medical Gastroenterolgy",
-  "Neurology",
-  "Cardio Thorasic Surgeon",
-  "Cardiology",
-  "Plastic Surgery",
-  "Vascular Surgery",
-  "TB & Respiratory Dept",
-  "Blood bank",
-  "Physical Medicine",
-  "Geriatrics",
-  "DEIC",
-  "Radiology Physicist",
-  "ART",
-  "CSSD",
-  "Medical Strore",
-  "Surgical Store",
-  "MRD"
-];
+import {
+  INCOMING_SENDERS,
+  COLLEGE_SECTIONS,
+  HOSPITAL_SECTIONS,
+  ALL_SECTIONS,
+  DEPARTMENTS
+} from "../config/departments";
+
+const DEFAULT_SENDERS = INCOMING_SENDERS;
 
 export default function UploadPage() {
-  const [departments, setDepartments] = useState([]);
-  const [selectedDept, setSelectedDept] = useState("Pharmacy");
+  const [collegeSections, setCollegeSections] = useState(COLLEGE_SECTIONS);
+  const [hospitalSections, setHospitalSections] = useState(HOSPITAL_SECTIONS);
+  const [departments, setDepartments] = useState(DEPARTMENTS);
+  const [selectedDept, setSelectedDept] = useState(COLLEGE_SECTIONS[0].name);
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -129,13 +91,21 @@ export default function UploadPage() {
   const senderContainerRef = useRef(null);
 
   useEffect(() => {
-    // 1. Fetch authorized departments list
+    // 1. Fetch authorized departments & sections list
     api.get("/departments")
       .then((res) => {
-        if (res.data && res.data.departments) {
-          setDepartments(res.data.departments);
-          if (res.data.departments.length > 0) {
-            setSelectedDept(res.data.departments[0]);
+        if (res.data) {
+          if (res.data.collegeSections && res.data.collegeSections.length > 0) {
+            setCollegeSections(res.data.collegeSections);
+          }
+          if (res.data.hospitalSections && res.data.hospitalSections.length > 0) {
+            setHospitalSections(res.data.hospitalSections);
+          }
+          if (res.data.departments && res.data.departments.length > 0) {
+            setDepartments(res.data.departments);
+          }
+          if (res.data.incomingSenders && res.data.incomingSenders.length > 0) {
+            setKnownSenders(res.data.incomingSenders);
           }
         }
       })
@@ -612,20 +582,29 @@ export default function UploadPage() {
 
               {/* Target Department Dropdown */}
               <div className="form-group">
-                <label className="form-label" htmlFor="dept">
-                  <Building size={14} /> Target Department: <span className="text-danger">*</span>
+                <label className="form-label font-bold" htmlFor="dept">
+                  <Building size={14} /> Target Department / Section: <span className="text-danger">*</span>
                 </label>
                 <select
                   id="dept"
-                  className="form-select"
+                  className="form-select target-dept-select"
                   value={selectedDept}
                   onChange={(e) => setSelectedDept(e.target.value)}
                 >
-                  {departments.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
+                  <optgroup label="COLLEGE" className="optgroup-header optgroup-college">
+                    {collegeSections.map((sec) => (
+                      <option key={sec.name || sec} value={sec.name || sec}>
+                        {sec.name || sec} {sec.description ? `— ${sec.description}` : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="HOSPITAL" className="optgroup-header optgroup-hospital">
+                    {hospitalSections.map((sec) => (
+                      <option key={sec.name || sec} value={sec.name || sec}>
+                        {sec.name || sec} {sec.description ? `— ${sec.description}` : ""}
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
 

@@ -4,7 +4,13 @@
  */
 
 const googleSheetsService = require("../services/googleSheetsService");
-const { DEPARTMENTS } = require("../config/departments");
+const {
+  DEPARTMENTS,
+  INCOMING_SENDERS,
+  COLLEGE_SECTIONS,
+  HOSPITAL_SECTIONS,
+  ALL_SECTIONS
+} = require("../config/departments");
 
 class DashboardController {
   async getSummary(req, res) {
@@ -70,7 +76,11 @@ class DashboardController {
   getDepartments(req, res) {
     return res.status(200).json({
       success: true,
-      departments: DEPARTMENTS
+      departments: DEPARTMENTS,
+      incomingSenders: INCOMING_SENDERS,
+      collegeSections: COLLEGE_SECTIONS,
+      hospitalSections: HOSPITAL_SECTIONS,
+      allSections: ALL_SECTIONS
     });
   }
 
