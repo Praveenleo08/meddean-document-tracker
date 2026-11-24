@@ -22,7 +22,12 @@ function ProtectedLayout({ children, requiredRole }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && user.role !== requiredRole) {
+  const isRoleMatch =
+    !requiredRole ||
+    user.role === requiredRole ||
+    (requiredRole === "department" && (user.role === "section" || user.role === "department"));
+
+  if (!isRoleMatch) {
     return user.role === "admin" ? (
       <Navigate to="/admin/dashboard" replace />
     ) : (

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { auth } from "../config/firebase";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
@@ -7,12 +8,26 @@ const api = axios.create({
   timeout: 60000
 });
 
-// Request interceptor to attach JWT token
+// Request interceptor to attach Firebase ID token
 api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("meddean_token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  async (config) => {
+    try {
+      let token = null;
+      if (auth.currentUser) {
+        token = await auth.currentUser.getIdToken();
+        localStorage.setItem("meddean_token", token);
+      } else {
+        token = localStorage.getItem("meddean_token");
+      }
+
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (e) {
+      const fallbackToken = localStorage.getItem("meddean_token");
+      if (fallbackToken) {
+        config.headers.Authorization = `Bearer ${fallbackToken}`;
+      }
     }
     return config;
   },

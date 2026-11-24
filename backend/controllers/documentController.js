@@ -215,10 +215,11 @@ class DocumentController {
       let allDocs = await googleSheetsService.getAllCommunications();
 
       // Enforce strict server-side role authorization
-      if (user.role === "department") {
-        allDocs = allDocs.filter(d => d.department.toLowerCase() === user.department.toLowerCase());
+      if (user.role === "section" || user.role === "department") {
+        const userDept = (user.department || "").toLowerCase();
+        allDocs = allDocs.filter(d => (d.department || "").toLowerCase() === userDept);
       } else if (user.role === "admin" && req.query.department) {
-        allDocs = allDocs.filter(d => d.department.toLowerCase() === req.query.department.toLowerCase());
+        allDocs = allDocs.filter(d => (d.department || "").toLowerCase() === req.query.department.toLowerCase());
       }
 
       // Filter by status if requested
@@ -272,7 +273,7 @@ class DocumentController {
       const user = req.user;
       let pendingDocs = [];
 
-      if (user.role === "department") {
+      if (user.role === "section" || user.role === "department") {
         pendingDocs = await googleSheetsService.getPendingCommunicationsByDepartment(user.department);
       } else {
         const targetDept = req.query.department;
@@ -320,8 +321,8 @@ class DocumentController {
         });
       }
 
-      // Enforce department authorization
-      if (req.user.role === "department" && doc.department.toLowerCase() !== req.user.department.toLowerCase()) {
+      // Enforce department / section authorization
+      if ((req.user.role === "section" || req.user.role === "department") && doc.department.toLowerCase() !== req.user.department.toLowerCase()) {
         return res.status(403).json({
           success: false,
           error: "Unauthorized: You do not have permission to view documents from other departments."
@@ -357,8 +358,8 @@ class DocumentController {
         });
       }
 
-      // Department authorization check
-      if (req.user.role === "department" && doc.department.toLowerCase() !== req.user.department.toLowerCase()) {
+      // Department / section authorization check
+      if ((req.user.role === "section" || req.user.role === "department") && doc.department.toLowerCase() !== req.user.department.toLowerCase()) {
         return res.status(403).json({
           success: false,
           error: "Unauthorized: You do not have permission to update documents of other departments."

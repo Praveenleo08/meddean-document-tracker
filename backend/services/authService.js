@@ -10,6 +10,7 @@ const path = require("path");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { ALL_SECTIONS } = require("../config/departments");
+const firebaseAuthService = require("./firebaseAuthService");
 
 const JWT_SECRET = process.env.JWT_SECRET || "meddean-jwt-super-secret-key-2026";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "24h";
@@ -40,6 +41,11 @@ class AuthService {
         const raw = fs.readFileSync(this.usersFile, "utf-8");
         this.users = JSON.parse(raw);
         console.log(`[AuthService] Loaded ${this.users.length} accounts from ${this.usersFile}`);
+        setTimeout(() => {
+          firebaseAuthService.syncAllUsersToFirebase(this.users).catch((err) => {
+            console.error("[AuthService] Firebase auto-sync error:", err.message);
+          });
+        }, 1000);
         return;
       } catch (err) {
         console.error("[AuthService] Error reading users file, re-initializing:", err.message);
@@ -162,10 +168,33 @@ class AuthService {
   }
 
   /**
-   * Verify JWT token
+   * Verify token (Firebase ID Token or fallback JWT)
    */
-  verifyToken(token) {
-    return jwt.verify(token, JWT_SECRET);
+  async verifyToken(token) {
+    // 1. Try Firebase Admin ID token verification first
+    try {
+      const decoded = await firebaseAuthService.verifyIdToken(token);
+      const username = decoded.sectionId || (decoded.email ? decoded.email.split("@")[0] : "");
+      const localUser = this.users.find((u) => u.username.toLowerCase() === username.toLowerCase());
+      const role = decoded.role || (decoded.email === "admin@meddean.local" ? "admin" : "section");
+
+      return {
+        uid: decoded.uid,
+        id: localUser ? localUser.id : decoded.uid,
+        email: decoded.email,
+        username: username,
+        role: role === "section" ? "section" : role,
+        sectionId: decoded.sectionId || username,
+        department: decoded.department || (localUser ? localUser.department : "General"),
+        accountName: decoded.accountName || (localUser ? localUser.accountName : "General Dept"),
+        profileName: localUser ? (localUser.profileName || localUser.name) : (decoded.name || username),
+        name: localUser ? (localUser.profileName || localUser.name) : (decoded.name || username),
+        category: decoded.category || (localUser ? localUser.category : "Section")
+      };
+    } catch (fbErr) {
+      // 2. Fallback to standard JWT verification
+      return jwt.verify(token, JWT_SECRET);
+    }
   }
 
   /**
@@ -253,6 +282,10 @@ class AuthService {
     if (password && password.trim()) {
       user.passwordHash = bcrypt.hashSync(password.trim(), 10);
       user.customPasswordSet = true;
+      // Sync updated password to Firebase Auth
+      firebaseAuthService.updateUserPassword(user.username, password.trim()).catch((err) => {
+        console.error("[AuthService] Error updating Firebase password:", err.message);
+      });
     }
 
     // 5. Work description / title
@@ -262,6 +295,16 @@ class AuthService {
 
     user.lastUpdated = new Date().toISOString();
     this.saveUsersDatabase();
+
+    // Sync updated claims to Firebase Auth
+    firebaseAuthService.updateUserClaimsAndDetails(user.username, {
+      department: user.department,
+      accountName: user.accountName,
+      category: user.category,
+      role: user.role
+    }).catch((err) => {
+      console.error("[AuthService] Error updating Firebase claims:", err.message);
+    });
 
     return this.buildUserPayload(user);
   }

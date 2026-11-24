@@ -1,11 +1,11 @@
 /**
  * Authentication and Role-based Authorization Middleware.
- * Strictly verifies JWT tokens and enforces department-level isolation on the server.
+ * Strictly verifies Firebase ID tokens (and custom claims) and enforces department-level isolation on the server.
  */
 
 const authService = require("../services/authService");
 
-function authenticateToken(req, res, next) {
+async function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
 
@@ -17,7 +17,7 @@ function authenticateToken(req, res, next) {
   }
 
   try {
-    const decoded = authService.verifyToken(token);
+    const decoded = await authService.verifyToken(token);
     req.user = decoded;
     next();
   } catch (err) {
@@ -44,9 +44,8 @@ function authorizeDepartmentAccess(req, res, next) {
     return next();
   }
 
-  // Department users can only access their authenticated department
-  if (req.user && req.user.role === "department") {
-    // If a document department or department param is specified, verify match
+  // Section / Department users can only access their authenticated department
+  if (req.user && (req.user.role === "section" || req.user.role === "department")) {
     const targetDept = req.params.department || req.query.department || (req.body && req.body.department);
     if (targetDept && targetDept.toLowerCase() !== req.user.department.toLowerCase()) {
       return res.status(403).json({

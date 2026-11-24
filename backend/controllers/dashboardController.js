@@ -17,8 +17,8 @@ class DashboardController {
     try {
       const user = req.user;
 
-      if (user.role === "department") {
-        // Department user KPI and summary
+      if (user.role === "section" || user.role === "department") {
+        // Department / Section user KPI and summary
         const deptDocs = await googleSheetsService.getAllCommunicationsByDepartment(user.department);
         const total = deptDocs.length;
         const pending = deptDocs.filter(d => (d.status || "").toLowerCase() === "pending").length;
