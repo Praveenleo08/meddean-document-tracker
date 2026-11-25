@@ -65,11 +65,15 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(` MedDean Document Tracker Backend API`);
-  console.log(` Running on: http://localhost:${PORT}`);
-  console.log(` System local time: ${new Date().toLocaleString()}`);
-  console.log(`====================================================`);
-});
+// Start Server if run directly
+if (require.main === module || (!process.env.VERCEL && process.env.NODE_ENV !== "test")) {
+  app.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(` MedDean Document Tracker Backend API`);
+    console.log(` Running on: http://localhost:${PORT}`);
+    console.log(` System local time: ${new Date().toLocaleString()}`);
+    console.log(`====================================================`);
+  });
+}
+
+module.exports = app;

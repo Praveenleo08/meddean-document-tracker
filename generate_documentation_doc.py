@@ -493,7 +493,7 @@ def build_document():
             r.font.size = Pt(9)
             r.font.color.rgb = RGBColor(30, 41, 59)
 
-    add_callout(doc, "Diagnostic Verified: The test_google_sheets_sync.js script confirms zero row duplication, live batch updates, and successful sync to Google Spreadsheet ID 13AI9CoQSApMXUoNYkVJg0Ci_qCFgw0KRy0NWax5KM7g.", title="VERIFICATION COMPLETE")
+    add_callout(doc, "Diagnostic Verified: The test scripts confirm zero row duplication, live batch updates, and successful sync to the configured Google Spreadsheet (ID: 1nmm43EGPPgnMwcbRkAOCX9LD4XXjKdzkFhBeTo8I6BY).", title="VERIFICATION COMPLETE")
 
     # Save Document
     target_path = r"C:\Users\prave\.gemini\antigravity\scratch\meddean-document-tracker\MedDean_Document_Tracker_Documentation.docx"

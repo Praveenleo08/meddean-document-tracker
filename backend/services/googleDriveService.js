@@ -1,7 +1,8 @@
 /**
  * Google Drive Service for MedDean Document Tracker.
- * Handles folder structure (Root: MedDean_Documents, Subfolders per Department),
- * document uploads, secure link generation, and local fallback storage.
+ * Handles folder structure (Root: MedDean_Documents, Subfolders per Section/Department),
+ * document uploads, secure shareable link generation, and local fallback storage.
+ * Primary Auth: Google OAuth 2.0 (meddeanofficial@gmail.com).
  */
 
 require("dotenv").config();
@@ -46,15 +47,30 @@ class GoogleDriveService {
   }
 
   /**
-   * Initializes Google Drive API client using OAuth2 or Service Account
+   * Initializes Google Drive API client using OAuth 2.0 (Primary) or Service Account
    */
   initGoogleClient() {
     try {
       const clientId = process.env.GOOGLE_CLIENT_ID;
       const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
       const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
-      const serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
 
+      // 1. Primary: User OAuth 2.0 Credentials (meddeanofficial@gmail.com)
+      if (clientId && clientSecret && refreshToken) {
+        const oauth2Client = new google.auth.OAuth2(
+          clientId,
+          clientSecret,
+          process.env.GOOGLE_REDIRECT_URI || "https://developers.google.com/oauthplayground"
+        );
+        oauth2Client.setCredentials({ refresh_token: refreshToken });
+        this.driveClient = google.drive({ version: "v3", auth: oauth2Client });
+        this.isConfigured = true;
+        console.log("[Google Drive] Initialized via OAuth 2.0 Credentials (meddeanofficial@gmail.com).");
+        return;
+      }
+
+      // 2. Fallback: Service Account (if configured)
+      const serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
       let resolvedKeyPath = null;
       if (serviceAccountPath) {
         if (path.isAbsolute(serviceAccountPath) && fs.existsSync(serviceAccountPath)) {
@@ -66,17 +82,7 @@ class GoogleDriveService {
         }
       }
 
-      if (clientId && clientSecret && refreshToken) {
-        const oauth2Client = new google.auth.OAuth2(
-          clientId,
-          clientSecret,
-          process.env.GOOGLE_REDIRECT_URI || "http://localhost:8999/oauth2callback"
-        );
-        oauth2Client.setCredentials({ refresh_token: refreshToken });
-        this.driveClient = google.drive({ version: "v3", auth: oauth2Client });
-        this.isConfigured = true;
-        console.log("[Google Drive] Initialized via User OAuth 2.0 Credentials (Using 15 GB Personal Drive Quota).");
-      } else if (resolvedKeyPath) {
+      if (resolvedKeyPath) {
         const auth = new google.auth.GoogleAuth({
           keyFile: resolvedKeyPath,
           scopes: ["https://www.googleapis.com/auth/drive"]
@@ -85,7 +91,7 @@ class GoogleDriveService {
         this.isConfigured = true;
         console.log("[Google Drive] Initialized via Service Account Key file:", resolvedKeyPath);
       } else {
-        console.log("[Google Drive] Running in Local Storage Mode (configure GOOGLE_CLIENT_ID or GOOGLE_SERVICE_ACCOUNT_KEY_PATH in .env for live Drive sync).");
+        console.log("[Google Drive] Running in Local Storage Mode (configure GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN in .env for live Drive sync).");
       }
     } catch (err) {
       console.warn("[Google Drive] Initialization note:", err.message);
@@ -119,10 +125,11 @@ class GoogleDriveService {
         mimeType: "application/vnd.google-apps.folder"
       };
       const created = await this.driveClient.files.create({
-        resource: folderMetadata,
+        requestBody: folderMetadata,
         fields: "id"
       });
       this.rootFolderId = created.data.id;
+      console.log(`[Google Drive] Created Root Folder 'MedDean_Documents' with ID: ${this.rootFolderId}`);
       return this.rootFolderId;
     } catch (err) {
       console.error("[Google Drive] findOrCreateRootFolder error:", err.message);
@@ -131,7 +138,7 @@ class GoogleDriveService {
   }
 
   /**
-   * Finds or creates a department folder inside root Drive folder
+   * Auto-creates section subfolders inside GOOGLE_DRIVE_ROOT_FOLDER_ID if they do not exist yet when uploading a file.
    */
   async findOrCreateDepartmentFolder(departmentName) {
     if (!this.isConfigured || !this.driveClient) return `local-${departmentName}-folder`;
@@ -142,7 +149,8 @@ class GoogleDriveService {
 
     try {
       const rootId = await this.findOrCreateRootFolder();
-      const q = `name = '${departmentName}' and '${rootId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
+      const safeDeptName = departmentName.replace(/'/g, "\\'");
+      const q = `name = '${safeDeptName}' and '${rootId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
       
       const res = await this.driveClient.files.list({
         q,
@@ -156,18 +164,19 @@ class GoogleDriveService {
         return folderId;
       }
 
-      // Create department folder
+      // Create section subfolder inside MedDean_Documents
       const folderMetadata = {
         name: departmentName,
         mimeType: "application/vnd.google-apps.folder",
         parents: [rootId]
       };
       const created = await this.driveClient.files.create({
-        resource: folderMetadata,
+        requestBody: folderMetadata,
         fields: "id"
       });
       const folderId = created.data.id;
       this.departmentFolderMap.set(departmentName, folderId);
+      console.log(`[Google Drive] Auto-created section subfolder '${departmentName}' (ID: ${folderId}) in MedDean_Documents.`);
       return folderId;
     } catch (err) {
       console.error(`[Google Drive] findOrCreateDepartmentFolder for ${departmentName} error:`, err.message);
@@ -176,7 +185,7 @@ class GoogleDriveService {
   }
 
   /**
-   * Uploads document file to department folder
+   * Uploads document file to department subfolder inside MedDean_Documents
    */
   async uploadDocument({ buffer, mimeType, filename, department, documentId }) {
     const targetDept = DEPARTMENTS.includes(department) ? department : (DEPARTMENTS[0] || "College - E1 section");
@@ -199,12 +208,12 @@ class GoogleDriveService {
         };
 
         const res = await this.driveClient.files.create({
-          resource: fileMetadata,
+          requestBody: fileMetadata,
           media: media,
           fields: "id, name, webViewLink, webContentLink"
         });
 
-        // Make shareable / accessible for viewing
+        // Make shareable / accessible for viewing by institutional users
         try {
           await this.driveClient.permissions.create({
             fileId: res.data.id,
@@ -214,7 +223,7 @@ class GoogleDriveService {
             }
           });
         } catch (permErr) {
-          // Ignore if domain restricted
+          // Domain permission warning
         }
 
         return {
@@ -240,7 +249,6 @@ class GoogleDriveService {
     const localFilePath = path.join(deptDir, filename);
     fs.writeFileSync(localFilePath, buffer);
 
-    const relativeLocalPath = path.relative(path.resolve(__dirname, ".."), localFilePath).replace(/\\/g, "/");
     const link = `/api/documents/preview/${fileId}`;
 
     // Record metadata

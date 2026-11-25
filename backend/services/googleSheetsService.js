@@ -2,6 +2,7 @@
  * Google Sheets Service for MedDean Document Tracker.
  * Manages the single central register: 'MedDean_Communication_Register', Sheet: 'Communication Register'.
  * Enforces single-row-per-document rule using Document ID as unique primary key.
+ * Primary Auth: Google OAuth 2.0 (meddeanofficial@gmail.com).
  */
 
 const { google } = require("googleapis");
@@ -11,6 +12,8 @@ const { DEPARTMENTS } = require("../config/departments");
 const { formatDateReadable, formatDateTimeReadable } = require("../utils/dateUtils");
 
 const SHEET_NAME = "Communication Register";
+
+// 14 Standard Header Columns (A-N) + Extended workflow columns (O-P)
 const HEADERS = [
   "Document ID",
   "Reference No",
@@ -47,7 +50,7 @@ class GoogleSheetsService {
   }
 
   /**
-   * Initializes local register with demo data if not existing
+   * Initializes local register with clean storage if not existing
    */
   initLocalRegister() {
     if (!fs.existsSync(this.dataPath)) {
@@ -60,18 +63,35 @@ class GoogleSheetsService {
   }
 
   /**
-   * Initializes Google Sheets API client with Service Account or OAuth 2.0
+   * Initializes Google Sheets API client with OAuth 2.0 (Primary) or fallback Service Account
    */
   initGoogleClient() {
     try {
       this.spreadsheetId = process.env.GOOGLE_SHEET_ID || null;
-      const serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
-      const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
       const clientId = process.env.GOOGLE_CLIENT_ID;
       const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
       const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
 
-      // 1. Service Account via JSON string
+      // 1. Primary: Google OAuth 2.0 Credentials (meddeanofficial@gmail.com)
+      if (clientId && clientSecret && refreshToken && this.spreadsheetId) {
+        const oauth2Client = new google.auth.OAuth2(
+          clientId,
+          clientSecret,
+          process.env.GOOGLE_REDIRECT_URI || "https://developers.google.com/oauthplayground"
+        );
+        oauth2Client.setCredentials({ refresh_token: refreshToken });
+        this.sheetsClient = google.sheets({ version: "v4", auth: oauth2Client });
+        this.isConfigured = true;
+        this.connectionMode = "LIVE_GOOGLE_SHEETS";
+        console.log(`[Google Sheets] Connected LIVE to Spreadsheet ID: ${this.spreadsheetId} via OAuth 2.0 (meddeanofficial).`);
+        this.ensureHeadersExist();
+        return;
+      }
+
+      // 2. Fallback: Service Account (if configured)
+      const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+      const serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
+
       if (serviceAccountJson && this.spreadsheetId) {
         try {
           const credentials = JSON.parse(serviceAccountJson);
@@ -90,14 +110,12 @@ class GoogleSheetsService {
         }
       }
 
-      // 2. Service Account via JSON file path
       let resolvedPath = null;
       const candidates = [
         serviceAccountPath,
         serviceAccountPath ? path.resolve(__dirname, "../", serviceAccountPath) : null,
         serviceAccountPath ? path.resolve(process.cwd(), serviceAccountPath) : null,
-        path.resolve(__dirname, "../config/google-service-account.json"),
-        path.resolve(__dirname, "../config/google-service-account.json.json")
+        path.resolve(__dirname, "../config/google-service-account.json")
       ];
       for (const c of candidates) {
         if (c && fs.existsSync(c)) {
@@ -114,23 +132,7 @@ class GoogleSheetsService {
         this.sheetsClient = google.sheets({ version: "v4", auth });
         this.isConfigured = true;
         this.connectionMode = "LIVE_GOOGLE_SHEETS";
-        console.log(`[Google Sheets] Connected LIVE to Spreadsheet ID: ${this.spreadsheetId} via Service Account Key file: ${resolvedPath}`);
-        this.ensureHeadersExist();
-        return;
-      }
-
-      // 3. OAuth 2.0 Credentials
-      if (clientId && clientSecret && refreshToken && this.spreadsheetId) {
-        const oauth2Client = new google.auth.OAuth2(
-          clientId,
-          clientSecret,
-          process.env.GOOGLE_REDIRECT_URI || "http://localhost:5000/api/auth/google/callback"
-        );
-        oauth2Client.setCredentials({ refresh_token: refreshToken });
-        this.sheetsClient = google.sheets({ version: "v4", auth: oauth2Client });
-        this.isConfigured = true;
-        this.connectionMode = "LIVE_GOOGLE_SHEETS";
-        console.log(`[Google Sheets] Connected LIVE to Spreadsheet ID: ${this.spreadsheetId} via OAuth 2.0.`);
+        console.log(`[Google Sheets] Connected LIVE to Spreadsheet ID: ${this.spreadsheetId} via Service Account file: ${resolvedPath}`);
         this.ensureHeadersExist();
         return;
       }
@@ -138,7 +140,7 @@ class GoogleSheetsService {
       // Default: Local Register mode
       this.isConfigured = false;
       this.connectionMode = "LOCAL_SIMULATION";
-      console.log("[Google Sheets] Operating in Local Register Mode. (Set GOOGLE_SHEET_ID and Service Account in .env for live sync)");
+      console.log("[Google Sheets] Operating in Local Register Mode. (Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, and GOOGLE_SHEET_ID in .env for live sync)");
     } catch (err) {
       console.warn("[Google Sheets] Initialization note:", err.message);
       this.isConfigured = false;
@@ -147,13 +149,15 @@ class GoogleSheetsService {
   }
 
   /**
-   * Ensures the sheet tab exists and has the standard 14 headers in Row 1
+   * Startup & Write guard:
+   * Checks if 'Communication Register' tab exists and Row 1 is populated.
+   * If Row 1 is blank or missing, automatically writes our 14 standard header columns (A-N) + extensions.
    */
   async ensureHeadersExist() {
     if (!this.isConfigured || !this.sheetsClient || !this.spreadsheetId) return;
 
     try {
-      // 1. Check if SHEET_NAME tab exists
+      // 1. Verify if SHEET_NAME tab exists, create if not
       const meta = await this.sheetsClient.spreadsheets.get({
         spreadsheetId: this.spreadsheetId
       });
@@ -182,25 +186,27 @@ class GoogleSheetsService {
         });
       }
 
-      // 2. Check if headers are in Row 1
+      // 2. Check if headers exist in Row 1
       const headerRes = await this.sheetsClient.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${SHEET_NAME}!A1:P1`
+        range: `'${SHEET_NAME}'!A1:P1`
       });
 
-      if (!headerRes.data.values || headerRes.data.values.length === 0 || headerRes.data.values[0].length < HEADERS.length) {
-        console.log(`[Google Sheets] Updating ${HEADERS.length} standard headers to ${SHEET_NAME} Row 1...`);
+      const values = headerRes.data.values;
+      if (!values || values.length === 0 || values[0].length < 14) {
+        console.log(`[Google Sheets] Row 1 is blank or incomplete. Automatically initializing standard 14 header columns (A-N) into '${SHEET_NAME}' Row 1...`);
         await this.sheetsClient.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
-          range: `${SHEET_NAME}!A1:P1`,
+          range: `'${SHEET_NAME}'!A1:P1`,
           valueInputOption: "USER_ENTERED",
           requestBody: {
             values: [HEADERS]
           }
         });
+        console.log(`[Google Sheets] Standard 14 headers (A-N) successfully initialized in Google Sheet.`);
       }
     } catch (err) {
-      console.warn("[Google Sheets] ensureHeadersExist warning:", err.message);
+      console.warn("[Google Sheets] ensureHeadersExist notice:", err.message);
     }
   }
 
@@ -215,38 +221,196 @@ class GoogleSheetsService {
     try {
       const res = await this.sheetsClient.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${SHEET_NAME}!A:A`
+        range: `'${SHEET_NAME}'!A:A`
       });
 
       const rows = res.data.values || [];
+      const target = documentId.trim().toLowerCase();
+
       for (let i = 0; i < rows.length; i++) {
-        if (rows[i][0] && rows[i][0].toString().trim().toLowerCase() === documentId.toLowerCase()) {
-          return i + 1; // 1-based row index in sheet
+        if (rows[i][0] && rows[i][0].toString().trim().toLowerCase() === target) {
+          return i + 1; // 1-based index
         }
       }
+      return null;
     } catch (err) {
-      console.warn("[Google Sheets] findRowIndexInSheet error:", err.message);
+      console.error("[Google Sheets] findRowIndexInSheet error:", err.message);
+      return null;
     }
-    return null;
   }
 
-  readLocalRegister() {
-    try {
-      if (fs.existsSync(this.registerFile)) {
-        return JSON.parse(fs.readFileSync(this.registerFile, "utf-8"));
+  /**
+   * Reads all communication rows from Google Sheet or local register.
+   * If live Google Sheet is empty (only header row), returns empty array.
+   */
+  async getAllCommunications() {
+    if (this.isConfigured && this.sheetsClient && this.spreadsheetId) {
+      try {
+        await this.ensureHeadersExist();
+        const res = await this.sheetsClient.spreadsheets.values.get({
+          spreadsheetId: this.spreadsheetId,
+          range: `'${SHEET_NAME}'!A2:P`
+        });
+
+        const rows = res.data.values || [];
+        if (rows.length === 0) {
+          return [];
+        }
+
+        const parsed = rows
+          .map(row => this.rowToRecord(row))
+          .filter(r => r.documentId && r.documentId.trim() !== "");
+
+        // Keep local mirror synchronized
+        this.writeLocalRegister(parsed);
+        this.lastSyncTime = new Date().toISOString();
+        return parsed;
+      } catch (err) {
+        console.error("[Google Sheets] Live read failed, falling back to local:", err.message);
       }
-    } catch (e) {
-      console.error("[Google Sheets] Error reading register file:", e);
     }
-    return [];
+
+    return this.readLocalRegister();
   }
 
-  writeLocalRegister(data) {
-    try {
-      fs.writeFileSync(this.registerFile, JSON.stringify(data, null, 2), "utf-8");
-    } catch (e) {
-      console.error("[Google Sheets] Error writing register file:", e);
+  /**
+   * Reads communication by unique Document ID
+   */
+  async getCommunicationById(documentId) {
+    const all = await this.getAllCommunications();
+    return all.find(r => r.documentId.toLowerCase() === documentId.toLowerCase()) || null;
+  }
+
+  async findCommunicationByDocumentId(documentId) {
+    return this.getCommunicationById(documentId);
+  }
+
+  /**
+   * Appends a new communication record to Google Sheet.
+   * Ensures exactly one row is added to Google Sheet.
+   * Status defaults to 'Pending'.
+   */
+  async appendCommunication(record) {
+    const all = await this.getAllCommunications();
+
+    // Check for duplicate Document ID
+    const existing = all.find(r => r.documentId.toLowerCase() === record.documentId.toLowerCase());
+    if (existing) {
+      throw new Error(`Document with ID ${record.documentId} already exists in register.`);
     }
+
+    const newRecord = {
+      documentId: record.documentId,
+      referenceNo: record.referenceNo || "",
+      communicationDate: record.communicationDate || formatDateReadable(),
+      receivedDate: record.receivedDate || formatDateReadable(),
+      from: record.from || "",
+      subject: record.subject || "",
+      department: record.department,
+      status: "Pending",
+      remarks: record.remarks || "",
+      driveFileId: record.driveFileId || "",
+      driveFileLink: record.driveFileLink || "",
+      uploadedBy: record.uploadedBy || "admin",
+      lastUpdated: formatDateTimeReadable(),
+      closedDate: "",
+      deadlineDate: record.deadlineDate || "",
+      isUrgent: record.isUrgent === true || record.isUrgent === "YES" || false
+    };
+
+    // Update local mirror register
+    all.unshift(newRecord);
+    this.writeLocalRegister(all);
+
+    // Sync to live Google Sheet
+    if (this.isConfigured && this.sheetsClient && this.spreadsheetId) {
+      try {
+        await this.ensureHeadersExist();
+        const row = this.recordToRow(newRecord);
+        const appendRes = await this.sheetsClient.spreadsheets.values.append({
+          spreadsheetId: this.spreadsheetId,
+          range: `'${SHEET_NAME}'!A:P`,
+          valueInputOption: "USER_ENTERED",
+          insertDataOption: "INSERT_ROWS",
+          requestBody: {
+            values: [row]
+          }
+        });
+        console.log(`[Google Sheets] Successfully appended row for ${newRecord.documentId} to Google Sheet.`);
+        this.lastSyncTime = new Date().toISOString();
+      } catch (err) {
+        console.error("[Google Sheets] Live append failed:", err.message);
+      }
+    }
+
+    return newRecord;
+  }
+
+  /**
+   * Updates an EXISTING communication row in Google Sheets identified by Document ID.
+   * Finds the exact row in Google Sheet and updates it in place. NEVER creates duplicate rows.
+   */
+  async updateCommunication(documentId, updates) {
+    const all = await this.getAllCommunications();
+    const index = all.findIndex(r => r.documentId.toLowerCase() === documentId.toLowerCase());
+
+    if (index === -1) {
+      throw new Error(`Document ID ${documentId} not found in register.`);
+    }
+
+    const current = all[index];
+    const updated = {
+      ...current,
+      ...updates,
+      documentId: current.documentId, // Prevent modifying primary key
+      lastUpdated: formatDateTimeReadable()
+    };
+
+    // If status is transitioning to Closed, record closedDate
+    if (updates.status === "Closed" && !current.closedDate) {
+      updated.closedDate = formatDateReadable();
+    } else if (updates.status && updates.status !== "Closed") {
+      updated.closedDate = "";
+    }
+
+    all[index] = updated;
+    this.writeLocalRegister(all);
+
+    // Sync in-place row update to live Google Sheet
+    if (this.isConfigured && this.sheetsClient && this.spreadsheetId) {
+      try {
+        await this.ensureHeadersExist();
+        const liveRowNumber = await this.findRowIndexInSheet(documentId);
+        if (liveRowNumber) {
+          const row = this.recordToRow(updated);
+          await this.sheetsClient.spreadsheets.values.update({
+            spreadsheetId: this.spreadsheetId,
+            range: `'${SHEET_NAME}'!A${liveRowNumber}:P${liveRowNumber}`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: {
+              values: [row]
+            }
+          });
+          console.log(`[Google Sheets] Updated row ${liveRowNumber} in-place for ${documentId}. Status: ${updated.status}`);
+          this.lastSyncTime = new Date().toISOString();
+        } else {
+          // If row wasn't in sheet yet, append it once
+          console.log(`[Google Sheets] Row not found in sheet for ${documentId}, appending row...`);
+          await this.sheetsClient.spreadsheets.values.append({
+            spreadsheetId: this.spreadsheetId,
+            range: `'${SHEET_NAME}'!A:P`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: {
+              values: [this.recordToRow(updated)]
+            }
+          });
+        }
+      } catch (err) {
+        console.error("[Google Sheets] Live row update failed:", err.message);
+      }
+    }
+
+    return updated;
   }
 
   recordToRow(rec) {
@@ -287,180 +451,30 @@ class GoogleSheetsService {
       lastUpdated: row[12] || "",
       closedDate: row[13] || "",
       deadlineDate: row[14] || "",
-      isUrgent: row[15] === "YES" || row[15] === true || false
+      isUrgent: row[15] === "YES" || row[15] === true
     };
   }
 
-  /**
-   * Retrieves all communications from register.
-   * If live Google Sheet is configured, syncs directly from Google Sheet.
-   */
-  async getAllCommunications() {
-    if (this.isConfigured && this.sheetsClient && this.spreadsheetId) {
-      try {
-        const res = await this.sheetsClient.spreadsheets.values.get({
-          spreadsheetId: this.spreadsheetId,
-          range: `${SHEET_NAME}!A2:P`
-        });
-        const rows = res.data.values || [];
-        const records = rows
-          .filter(r => r && r[0] && r[0].toString().trim())
-          .map(r => this.rowToRecord(r));
-        
-        this.lastSyncTime = new Date().toISOString();
-        // Keep local mirror updated
-        if (records.length > 0) {
-          this.writeLocalRegister(records);
-        }
-        return records;
-      } catch (err) {
-        console.warn("[Google Sheets] Remote fetch failed, falling back to local register:", err.message);
+  readLocalRegister() {
+    try {
+      if (fs.existsSync(this.registerFile)) {
+        const raw = fs.readFileSync(this.registerFile, "utf-8");
+        return JSON.parse(raw);
       }
+    } catch (e) {
+      console.error("[Google Sheets] readLocalRegister error:", e.message);
     }
-
-    return this.readLocalRegister();
+    return [];
   }
 
-  /**
-   * Finds communication record by Document ID
-   */
-  async findCommunicationByDocumentId(documentId) {
-    const all = await this.getAllCommunications();
-    return all.find(r => r.documentId.toLowerCase() === documentId.toLowerCase()) || null;
+  writeLocalRegister(data) {
+    try {
+      fs.writeFileSync(this.registerFile, JSON.stringify(data, null, 2), "utf-8");
+    } catch (e) {
+      console.error("[Google Sheets] writeLocalRegister error:", e.message);
+    }
   }
 
-  /**
-   * Appends a new communication record to Google Sheet.
-   * Ensures exactly one row is added to Google Sheet.
-   * Status defaults to 'Pending'.
-   */
-  async appendCommunication(record) {
-    const all = this.readLocalRegister();
-
-    // Check for duplicate Document ID
-    const existing = all.find(r => r.documentId.toLowerCase() === record.documentId.toLowerCase());
-    if (existing) {
-      throw new Error(`Document with ID ${record.documentId} already exists in register.`);
-    }
-
-    const newRecord = {
-      documentId: record.documentId,
-      referenceNo: record.referenceNo || "",
-      communicationDate: record.communicationDate || formatDateReadable(),
-      receivedDate: record.receivedDate || formatDateReadable(),
-      from: record.from || "",
-      subject: record.subject || "",
-      department: record.department,
-      status: "Pending",
-      remarks: record.remarks || "",
-      driveFileId: record.driveFileId || "",
-      driveFileLink: record.driveFileLink || "",
-      uploadedBy: record.uploadedBy || "admin",
-      lastUpdated: formatDateTimeReadable(),
-      closedDate: "",
-      deadlineDate: record.deadlineDate || "",
-      isUrgent: record.isUrgent === true || record.isUrgent === "YES" || false
-    };
-
-    // Update local mirror register
-    all.unshift(newRecord);
-    this.writeLocalRegister(all);
-
-    // Sync to live Google Sheet
-    if (this.isConfigured && this.sheetsClient && this.spreadsheetId) {
-      try {
-        await this.ensureHeadersExist();
-        const row = this.recordToRow(newRecord);
-        const appendRes = await this.sheetsClient.spreadsheets.values.append({
-          spreadsheetId: this.spreadsheetId,
-          range: `${SHEET_NAME}!A:P`,
-          valueInputOption: "USER_ENTERED",
-          insertDataOption: "INSERT_ROWS",
-          requestBody: {
-            values: [row]
-          }
-        });
-        console.log(`[Google Sheets] Successfully appended row for ${newRecord.documentId} to Google Sheet.`);
-        this.lastSyncTime = new Date().toISOString();
-      } catch (err) {
-        console.error("[Google Sheets] Live append failed:", err.message);
-      }
-    }
-
-    return newRecord;
-  }
-
-  /**
-   * Updates an EXISTING communication row in Google Sheets identified by Document ID.
-   * CRITICAL DATA CONSISTENCY RULE:
-   * Finds the exact row in Google Sheet and updates it in place.
-   * NEVER creates a duplicate row.
-   */
-  async updateCommunication(documentId, updates) {
-    const all = this.readLocalRegister();
-    const index = all.findIndex(r => r.documentId.toLowerCase() === documentId.toLowerCase());
-
-    if (index === -1) {
-      throw new Error(`Document ID ${documentId} not found in register.`);
-    }
-
-    const current = all[index];
-    const updated = {
-      ...current,
-      ...updates,
-      documentId: current.documentId, // Prevent modifying primary key
-      lastUpdated: formatDateTimeReadable()
-    };
-
-    // If status is transitioning to Closed, record closedDate
-    if (updates.status === "Closed" && !current.closedDate) {
-      updated.closedDate = formatDateReadable();
-    } else if (updates.status && updates.status !== "Closed") {
-      updated.closedDate = "";
-    }
-
-    all[index] = updated;
-    this.writeLocalRegister(all);
-
-    // Sync in-place row update to live Google Sheet
-    if (this.isConfigured && this.sheetsClient && this.spreadsheetId) {
-      try {
-        const liveRowNumber = await this.findRowIndexInSheet(documentId);
-        if (liveRowNumber) {
-          const row = this.recordToRow(updated);
-          await this.sheetsClient.spreadsheets.values.update({
-            spreadsheetId: this.spreadsheetId,
-            range: `${SHEET_NAME}!A${liveRowNumber}:P${liveRowNumber}`,
-            valueInputOption: "USER_ENTERED",
-            requestBody: {
-              values: [row]
-            }
-          });
-          console.log(`[Google Sheets] Updated row ${liveRowNumber} in-place for ${documentId}. Status: ${updated.status}`);
-          this.lastSyncTime = new Date().toISOString();
-        } else {
-          // If row wasn't in sheet yet, append it once
-          console.log(`[Google Sheets] Row not found in sheet for ${documentId}, appending row...`);
-          await this.sheetsClient.spreadsheets.values.append({
-            spreadsheetId: this.spreadsheetId,
-            range: `${SHEET_NAME}!A:P`,
-            valueInputOption: "USER_ENTERED",
-            requestBody: {
-              values: [this.recordToRow(updated)]
-            }
-          });
-        }
-      } catch (err) {
-        console.error("[Google Sheets] Live row update failed:", err.message);
-      }
-    }
-
-    return updated;
-  }
-
-  /**
-   * Gets pending communications for a specific department
-   */
   async getPendingCommunicationsByDepartment(department) {
     const all = await this.getAllCommunications();
     return all.filter(r => 
@@ -469,17 +483,11 @@ class GoogleSheetsService {
     );
   }
 
-  /**
-   * Gets all communications for a specific department
-   */
   async getAllCommunicationsByDepartment(department) {
     const all = await this.getAllCommunications();
     return all.filter(r => r.department.toLowerCase() === department.toLowerCase());
   }
 
-  /**
-   * Generates department KPI summary
-   */
   async getDepartmentSummary() {
     const all = await this.getAllCommunications();
     const summary = {};
@@ -523,9 +531,6 @@ class GoogleSheetsService {
     return Object.values(summary);
   }
 
-  /**
-   * Overall system metrics
-   */
   async getOverallMetrics() {
     const all = await this.getAllCommunications();
     const total = all.length;
@@ -548,9 +553,6 @@ class GoogleSheetsService {
     };
   }
 
-  /**
-   * Connection status report for UI and diagnostic verification
-   */
   getConnectionStatus() {
     return {
       isConfigured: this.isConfigured,

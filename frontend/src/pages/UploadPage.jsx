@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 import CameraCapture from "../components/CameraCapture";
+import { compressImageIfNeeded } from "../utils/imageCompressor";
 import {
   UploadCloud,
   Camera,
@@ -130,7 +131,7 @@ export default function UploadPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleFileSelect = (selectedFile) => {
+  const handleFileSelect = async (selectedFile) => {
     if (!selectedFile) return;
 
     const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
@@ -141,11 +142,25 @@ export default function UploadPage() {
 
     setFileError("");
     setSaveError("");
-    setFile(selectedFile);
+
+    // Client-side image compression: keep mobile camera photos safely under Vercel's 4.5 MB payload limit
+    let fileToUse = selectedFile;
+    if (selectedFile.type.startsWith("image/")) {
+      try {
+        fileToUse = await compressImageIfNeeded(selectedFile);
+      } catch (err) {
+        console.warn("Image compression notice:", err);
+      }
+    } else if (selectedFile.size > 4.2 * 1024 * 1024) {
+      setFileError("PDF file is larger than 4.2 MB. Please compress or optimize the PDF before uploading.");
+      return;
+    }
+
+    setFile(fileToUse);
     setRegisteredDoc(null);
 
-    if (selectedFile.type.startsWith("image/")) {
-      const url = URL.createObjectURL(selectedFile);
+    if (fileToUse.type.startsWith("image/")) {
+      const url = URL.createObjectURL(fileToUse);
       setPreviewUrl(url);
     } else {
       setPreviewUrl("pdf_preview");
