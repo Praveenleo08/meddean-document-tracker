@@ -460,16 +460,31 @@ class DocumentController {
   async previewFile(req, res) {
     try {
       const { fileId } = req.params;
-      const fileInfo = googleDriveService.getLocalFile(fileId);
 
-      if (!fileInfo) {
-        return res.status(404).send("Document file not found or still syncing with Google Drive.");
+      // 1. Check local storage first
+      const fileInfo = googleDriveService.getLocalFile(fileId);
+      if (fileInfo) {
+        res.setHeader("Content-Type", fileInfo.mimeType || "application/pdf");
+        res.setHeader("Content-Disposition", `inline; filename="${fileInfo.filename}"`);
+        const fileStream = fs.createReadStream(fileInfo.localFilePath);
+        return fileStream.pipe(res);
       }
 
-      res.setHeader("Content-Type", fileInfo.mimeType || "application/pdf");
-      res.setHeader("Content-Disposition", `inline; filename="${fileInfo.filename}"`);
-      const fileStream = fs.createReadStream(fileInfo.localFilePath);
-      return fileStream.pipe(res);
+      // 2. Fetch from Google Drive API via authenticated OAuth client
+      if (googleDriveService.isConfigured && googleDriveService.driveClient) {
+        const remoteInfo = await googleDriveService.getRemoteFileStream(fileId);
+        if (remoteInfo && remoteInfo.stream) {
+          res.setHeader("Content-Type", remoteInfo.mimeType || "application/pdf");
+          res.setHeader("Content-Disposition", `inline; filename="${remoteInfo.filename}"`);
+          if (remoteInfo.size) {
+            res.setHeader("Content-Length", remoteInfo.size);
+          }
+          res.setHeader("Cache-Control", "public, max-age=3600");
+          return remoteInfo.stream.pipe(res);
+        }
+      }
+
+      return res.status(404).send("Document file not found on Google Drive or local storage.");
     } catch (err) {
       return res.status(500).send("Error loading file: " + err.message);
     }
@@ -482,16 +497,27 @@ class DocumentController {
   async downloadFile(req, res) {
     try {
       const { fileId } = req.params;
-      const fileInfo = googleDriveService.getLocalFile(fileId);
 
-      if (!fileInfo) {
-        return res.status(404).send("Document file not found.");
+      // 1. Check local storage
+      const fileInfo = googleDriveService.getLocalFile(fileId);
+      if (fileInfo) {
+        res.setHeader("Content-Type", fileInfo.mimeType || "application/octet-stream");
+        res.setHeader("Content-Disposition", `attachment; filename="${fileInfo.filename}"`);
+        const fileStream = fs.createReadStream(fileInfo.localFilePath);
+        return fileStream.pipe(res);
       }
 
-      res.setHeader("Content-Type", fileInfo.mimeType || "application/octet-stream");
-      res.setHeader("Content-Disposition", `attachment; filename="${fileInfo.filename}"`);
-      const fileStream = fs.createReadStream(fileInfo.localFilePath);
-      return fileStream.pipe(res);
+      // 2. Fetch from Google Drive API
+      if (googleDriveService.isConfigured && googleDriveService.driveClient) {
+        const remoteInfo = await googleDriveService.getRemoteFileStream(fileId);
+        if (remoteInfo && remoteInfo.stream) {
+          res.setHeader("Content-Type", remoteInfo.mimeType || "application/octet-stream");
+          res.setHeader("Content-Disposition", `attachment; filename="${remoteInfo.filename}"`);
+          return remoteInfo.stream.pipe(res);
+        }
+      }
+
+      return res.status(404).send("Document file not found.");
     } catch (err) {
       return res.status(500).send("Error downloading file: " + err.message);
     }

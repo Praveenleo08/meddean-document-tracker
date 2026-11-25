@@ -68,9 +68,29 @@ export default function DocumentModal({ document, onClose, onUpdated }) {
     }
   };
 
-  const filePreviewUrl = document.driveFileLink?.startsWith("/")
-    ? `http://localhost:5000${document.driveFileLink}`
-    : document.driveFileLink;
+  const [isImage, setIsImage] = useState(false);
+
+  // Authenticated server stream URL (resolves both local storage and Google Drive OAuth API stream)
+  const streamPreviewUrl = document.driveFileId
+    ? `/api/documents/preview/${document.driveFileId}`
+    : document.driveFileLink?.startsWith("/")
+    ? document.driveFileLink
+    : null;
+
+  // External full view URL (for Open in New Window button)
+  const fullViewUrl =
+    document.driveFileLink && document.driveFileLink !== "#"
+      ? document.driveFileLink
+      : streamPreviewUrl || "#";
+
+  React.useEffect(() => {
+    if (streamPreviewUrl) {
+      const img = new Image();
+      img.onload = () => setIsImage(true);
+      img.onerror = () => setIsImage(false);
+      img.src = streamPreviewUrl;
+    }
+  }, [streamPreviewUrl]);
 
   const isUrgent = document.isUrgent === true || document.isUrgent === "YES";
   const isSubmittedForClosure =
@@ -404,12 +424,13 @@ export default function DocumentModal({ document, onClose, onUpdated }) {
           <div className="modal-right-col">
             <div className="doc-preview-header">
               <span className="preview-title">Original Scanned Document</span>
-              {document.driveFileLink && document.driveFileLink !== "#" && (
+              {fullViewUrl && fullViewUrl !== "#" && (
                 <a
-                  href={filePreviewUrl}
+                  href={fullViewUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn btn-outline btn-xs"
+                  className="btn btn-outline btn-xs flex items-center gap-1"
+                  title="Open full document in new window"
                 >
                   <ExternalLink size={14} />
                   <span>Open Full View</span>
@@ -418,12 +439,22 @@ export default function DocumentModal({ document, onClose, onUpdated }) {
             </div>
 
             <div className="doc-preview-frame-container">
-              {document.driveFileLink && document.driveFileLink !== "#" ? (
-                <iframe
-                  src={filePreviewUrl}
-                  title="Document Preview"
-                  className="doc-preview-iframe"
-                />
+              {streamPreviewUrl ? (
+                isImage ? (
+                  <div className="doc-preview-image-wrapper">
+                    <img
+                      src={streamPreviewUrl}
+                      alt="Original Scanned Document"
+                      className="doc-preview-image"
+                    />
+                  </div>
+                ) : (
+                  <iframe
+                    src={streamPreviewUrl}
+                    title="Document Preview"
+                    className="doc-preview-iframe"
+                  />
+                )
               ) : (
                 <div className="preview-placeholder">
                   <FileText size={48} className="placeholder-icon" />

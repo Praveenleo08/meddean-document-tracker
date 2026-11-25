@@ -274,6 +274,35 @@ class GoogleDriveService {
   }
 
   /**
+   * Retrieves a readable stream and metadata from Google Drive for preview / download
+   */
+  async getRemoteFileStream(fileId) {
+    if (!this.isConfigured || !this.driveClient) return null;
+
+    try {
+      const meta = await this.driveClient.files.get({
+        fileId,
+        fields: "id, name, mimeType, size"
+      });
+
+      const response = await this.driveClient.files.get(
+        { fileId, alt: "media" },
+        { responseType: "stream" }
+      );
+
+      return {
+        stream: response.data,
+        mimeType: meta.data.mimeType || "application/octet-stream",
+        filename: meta.data.name || "document",
+        size: meta.data.size
+      };
+    } catch (err) {
+      console.error(`[Google Drive] getRemoteFileStream error for ${fileId}:`, err.message);
+      return null;
+    }
+  }
+
+  /**
    * Retrieves local file path and metadata by File ID for preview/download
    */
   getLocalFile(fileId) {
