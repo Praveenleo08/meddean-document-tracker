@@ -2,15 +2,12 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
-  ShieldCheck,
   LogIn,
   AlertCircle,
   Building2,
-  ChevronDown,
   Eye,
   EyeOff
 } from "lucide-react";
-import { COLLEGE_SECTIONS, HOSPITAL_SECTIONS } from "../config/departments";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -39,20 +36,6 @@ export default function LoginPage() {
     } else {
       setErrorMsg(res.error || "Invalid username or password.");
     }
-  };
-
-  const handleDemoFill = (u, p) => {
-    setUsername(u);
-    setPassword(p);
-    setErrorMsg("");
-  };
-
-  const handleQuickSelectSection = (e) => {
-    const selectedUsername = e.target.value;
-    if (!selectedUsername) return;
-    setUsername(selectedUsername);
-    setPassword("Dean@123");
-    setErrorMsg("");
   };
 
   return (
@@ -90,7 +73,7 @@ export default function LoginPage() {
               className="form-input"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. admin, college_e1, hospital_e1_1"
+              placeholder="Enter your username"
               autoFocus
               required
             />
@@ -107,7 +90,7 @@ export default function LoginPage() {
                 className="form-input password-input-field"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password (default: Dean@123)"
+                placeholder="Enter your password"
                 required
               />
               <button
@@ -132,92 +115,6 @@ export default function LoginPage() {
             <span>{loading ? "Authenticating..." : "Sign In"}</span>
           </button>
         </form>
-
-        {/* Institutional Accounts Quick Selector */}
-        <div className="demo-accounts-panel">
-          <div className="demo-panel-title">
-            <ShieldCheck size={14} /> Quick-Select Institutional Account (1-Click Fill)
-          </div>
-
-          <div className="demo-chips-grid">
-            <button
-              type="button"
-              className="demo-chip chip-admin"
-              onClick={() => handleDemoFill("admin", "Admin@123")}
-            >
-              <span className="chip-role">DEAN ADMIN</span>
-              <span className="chip-user">admin</span>
-            </button>
-
-            <button
-              type="button"
-              className="demo-chip chip-dept"
-              onClick={() => handleDemoFill("college_e1", "Dean@123")}
-            >
-              <span className="chip-role">COLLEGE E1</span>
-              <span className="chip-user">college_e1</span>
-            </button>
-
-            <button
-              type="button"
-              className="demo-chip chip-dept"
-              onClick={() => handleDemoFill("college_cash", "Dean@123")}
-            >
-              <span className="chip-role">COLLEGE CASH</span>
-              <span className="chip-user">college_cash</span>
-            </button>
-
-            <button
-              type="button"
-              className="demo-chip chip-dept"
-              onClick={() => handleDemoFill("hospital_e1_1", "Dean@123")}
-            >
-              <span className="chip-role">HOSPITAL E1</span>
-              <span className="chip-user">hospital_e1_1</span>
-            </button>
-
-            <button
-              type="button"
-              className="demo-chip chip-dept"
-              onClick={() => handleDemoFill("hospital_a1", "Dean@123")}
-            >
-              <span className="chip-role">HOSPITAL A1</span>
-              <span className="chip-user">hospital_a1</span>
-            </button>
-          </div>
-
-          {/* All 49 Sections Quick Dropdown */}
-          <div style={{ marginTop: "12px" }}>
-            <label className="text-xs text-muted block mb-1 font-medium">
-              Or pick from all 49 College & Hospital Sections:
-            </label>
-            <select
-              className="form-select text-xs"
-              onChange={handleQuickSelectSection}
-              value=""
-            >
-              <option value="" disabled>-- Select Section to Auto-Fill Login --</option>
-              <optgroup label="COLLEGE SECTIONS (24)" className="optgroup-header optgroup-college">
-                {COLLEGE_SECTIONS.map((sec) => (
-                  <option key={sec.username} value={sec.username}>
-                    {sec.name} ({sec.username})
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="HOSPITAL SECTIONS (25)" className="optgroup-header optgroup-hospital">
-                {HOSPITAL_SECTIONS.map((sec) => (
-                  <option key={sec.username} value={sec.username}>
-                    {sec.name} ({sec.username})
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-          </div>
-
-          <div style={{ marginTop: "8px", fontSize: "11px", color: "#64748b", textAlign: "center" }}>
-            Default Section Password: <strong style={{ color: "#0284c7" }}>Dean@123</strong> &bull; Admin Password: <strong style={{ color: "#0284c7" }}>Admin@123</strong>
-          </div>
-        </div>
 
         <div className="login-footer">
           <div className="architecture-note">
